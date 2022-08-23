@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import time
 import gym
@@ -10,53 +11,40 @@ env = gym.make('FrozenLake-v1')
 # as its own grid matrix MAP_SIZExMAP_SIZE and for each of the states
 # it would contain a vector 1xACTIONS_NUM representing the value of each
 # action in a given cell
-MAP_SIZE = 4
-ACTIONS_NUM = 4
-Q_Table = np.zeros(shape = (MAP_SIZE, MAP_SIZE, ACTIONS_NUM))
+MAP_SIZE = env.observation_space.n
+ACTIONS_NUM = env.action_space.n
+Q = np.zeros(shape = (MAP_SIZE, ACTIONS_NUM))
 
-print(Q_Table)
+print(Q[0])
 
 # Hyper-parameters
-number_of_episods = 2000
-number_of_steps = 25
-learning_rate = .8
-gamma = .95
+num_episodes = 2000
+num_steps = 99
+lr = .8
+y = .95
+rList = []
 
-for i in range(number_of_episods):
-    previous_state = env.reset()
-    action = 0
-
-    for j in range(number_of_steps):
-
-        past_col = previous_state % MAP_SIZE
-        past_row = previous_state - (int(previous_state / MAP_SIZE) * MAP_SIZE)
-
-        noise = np.random.randn(1, ACTIONS_NUM)
-        decrease_explanatory = 1./(i+1)
-        noise_for_actions = noise * decrease_explanatory
-
-        q_values_for_state = Q_Table[past_row][past_col][:]
-        action = np.argmax(q_values_for_state + noise_for_actions)
-
-        print("noise_for_actions: ", noise_for_actions, "q_values_for_state: ", q_values_for_state, "action: ", action)
-
-        current_state_number, reward, done, _ = env.step(action)  # apply it
-
-        col = current_state_number % MAP_SIZE
-        row = current_state_number - (int(current_state_number/MAP_SIZE) * MAP_SIZE)
-
-        Q_Table[row][col][action] = Q_Table[row][col][action] + learning_rate*(reward
-                                    + gamma*np.max(Q_Table[row][col][:]) - Q_Table[past_row][past_col][action])
-
-        previous_state = current_state_number
-
-        # Terminal point
-        if done:
+for i in range(num_episodes):
+    #Reset environment and get first new observation
+    s = env.reset()
+    rAll = 0
+    d = False
+    j = 0
+    #The Q-Table learning algorithm
+    while j < 99:
+        j+=1
+        #Choose an action by greedily (with noise) picking from Q table
+        a = np.argmax(Q[s,:] + np.random.randn(1,env.action_space.n)*(1./(i+1)))
+        #Get new state and reward from environment
+        s1,r,d,_ = env.step(a)
+        #Update Q-Table with new knowledge
+        Q[s,a] = Q[s,a] + lr*(r + y*np.max(Q[s1,:]) - Q[s,a])
+        rAll += r
+        s = s1
+        if d == True:
             break
+    #jList.append(j)
+    rList.append(rAll)
 
-print(Q_Table)
-
-# env.reset()
-# while True:
-#     print("hi")
-#     time.sleep(3)
+table = pd.DataFrame(Q)
+print(table)
